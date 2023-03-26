@@ -4,7 +4,13 @@
 #include <ostream>
 #include <stdexcept>
 #include <string>
+
+#include "../Interface.h"
+#include "../Errors.h"
+
 namespace Matrix {
+
+const std::string OrdinaryMatrixType = "OrdinaryMatrixType";
 
 template<typename T>
 class OrdinaryMatrix : public IMatrix<T>
@@ -20,7 +26,6 @@ class OrdinaryMatrix : public IMatrix<T>
             for (size_t i = 0; i < height; i ++)
                 data[i] = new T [width];
         }
-
         Data(const Data& other) : width(other.width), height(other.height)
         {
             data = new T*[height];
@@ -96,43 +101,90 @@ class OrdinaryMatrix : public IMatrix<T>
             std::swap(height, rhs.height);
         }
 
-        T* operator[](size_t i) { return data[i]; }
+        T*& operator[](size_t i) { return data[i]; }
     } data_;
 
     public:
     OrdinaryMatrix() = delete;
     OrdinaryMatrix(size_t cols, size_t rows, const T& val = T(0)) : data_(cols, rows)
     {
-        if (cols == 0) throw std::logic_error("Matrix with 0 columns can not be created");
-        if (rows == 0) throw std::logic_error("Matrix with 0 rows can not be created");
+        if (cols == 0) throw Matrix::MatrixError("Matrix with 0 columns can not be created");
+        if (rows == 0) throw Matrix::MatrixError("Matrix with 0 rows can not be created");
 
         for (size_t row = 0; row < data_.height; ++ row)
             std::fill(data_[row], data_[row] + cols, val);
     }
     template <typename Iterator>
-    OrdinaryMatrix (size_t cols, size_t rows, Iterator start, Iterator stop) : data_(cols, rows)
+    OrdinaryMatrix (size_t cols, size_t rows, Iterator start) : data_(cols, rows)
     {
-        if (cols == 0) throw std::logic_error("Matrix with 0 columns can not be created");
-        if (rows == 0) throw std::logic_error("Matrix with 0 rows can not be created");
+        if (cols == 0) throw Matrix::MatrixError("Matrix with 0 columns can not be created");
+        if (rows == 0) throw Matrix::MatrixError("Matrix with 0 rows can not be created");
 
         for (size_t row = 0; row < data_.height; ++ row)
-            for (size_t col = 0; col < data_.width && start != stop; ++ col, ++ start)
+            for (size_t col = 0; col < data_.width; ++ col, ++ start)
                 data_.data[row][col] = *start;
     }
 
     std::unique_ptr<IMatrix<T>> Clone() const
     { return std::unique_ptr<IMatrix<T>>(new OrdinaryMatrix<T>(*this)); }
 
+    const std::string& getType() const noexcept { return OrdinaryMatrixType; }
+
     size_t getWidth()  const noexcept { return data_.width; }
     size_t getHeight() const noexcept { return data_.height; }
 
-    T& Access(size_t row, size_t col)
+          T& Access(size_t row, size_t col)
     {
-        if (row >= data_.height) throw std::out_of_range("Row " + std::to_string(row) + " in matrix with height " + std::to_string(data_.height) + " can not be accessed");
-        if (col >= data_.height) throw std::out_of_range("Column " + std::to_string(col) + " in matrix with width " + std::to_string(data_.width) + " can not be accessed");
+        if (row >= data_.height) throw Matrix::MatrixError("Row " + std::to_string(row) + " in matrix with height " + std::to_string(data_.height) + " can not be accessed");
+        if (col >= data_.height) throw Matrix::MatrixError("Column " + std::to_string(col) + " in matrix with width " + std::to_string(data_.width) + " can not be accessed");
         return data_.data[row][col];
     }
-    const T& Access(size_t row, size_t col) const { return data_.data[row][col]; }
+    const T& Access(size_t row, size_t col) const
+    {
+        if (row >= data_.height) throw Matrix::MatrixError("Row " + std::to_string(row) + " in matrix with height " + std::to_string(data_.height) + " can not be accessed");
+        if (col >= data_.height) throw Matrix::MatrixError("Column " + std::to_string(col) + " in matrix with width " + std::to_string(data_.width) + " can not be accessed");
+        return data_.data[row][col];
+    }
+
+    T det() // Bareiss algorithm
+    {
+        if (data_.width != data_.height) throw Matrix::MatrixError("Can not find the discriminant of non-square matrix");
+
+        Data copy = data_;
+        size_t dim = data_.width;
+
+        int sign = 1;
+
+        const T nullItem = T(0);
+
+        T ak_1k_1 = T(1);
+        for (size_t k = 0; k < dim - 1; ++ k)
+        {
+            if (copy[k][k] == nullItem)
+            {
+                for (size_t i = k + 1; i < dim; ++ i)
+                    if (copy[i][k] != nullItem)
+                    {
+                        std::swap(copy[k], copy[i]);
+                        sign *= -1;
+                        break;
+                    }
+                if (copy[k][k] == nullItem)
+                    return nullItem;
+            }
+
+            T akk = copy[k][k];
+            for (size_t i = k + 1; i < dim; ++ i)
+            {
+                T aik = copy[i][k];
+                for (size_t j = k + 1; j <= dim; ++ j)
+                    copy[i][j] = (copy[i][j] * akk - copy[k][j] * copy[i][k]) / ak_1k_1;
+            }
+
+            ak_1k_1 = copy[k][k];
+        }
+        return sign * copy[dim - 1][dim - 1];
+    }
 };
 
 }

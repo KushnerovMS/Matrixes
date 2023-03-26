@@ -1,9 +1,12 @@
 #pragma once
 
+#include <initializer_list>
+#include <string>
+#include <iostream>
+#include <vector>
+
 #include "Interface.h"
 #include "Definitions/OrdinaryMatrix.h"
-#include <string>
-#include <ostream>
 
 namespace Matrix {
 
@@ -26,6 +29,7 @@ class Matrix
 
         explicit MatrixPtr(IMatrix<T>* mtrx) : m_ptr(mtrx) {}
 
+        MatrixPtr() = default;
         MatrixPtr(const MatrixPtr& other) : m_ptr(ptr.m_ptr -> Clone().release()) {}
         MatrixPtr(MatrixPtr&& other) noexcept : m_ptr(other.m_ptr) { other.m_ptr = nullptr; }
 
@@ -51,6 +55,9 @@ class Matrix
     public:
 
     Matrix(IMatrix<T>* mtrx) : ptr(mtrx) {}
+    template<typename Iterator>
+    Matrix(size_t width, size_t height, Iterator start) :
+        ptr(new OrdinaryMatrix<T>(width, height, start)) {}
 
     class Row
     {
@@ -104,6 +111,8 @@ class Matrix
         stream << OutputFormat.MatrixEnd;
     }
 
+    inline T det() { return ptr.m_ptr -> det(); }
+
 
     static Matrix Zeros(size_t width, size_t height = 0)
     {
@@ -122,6 +131,25 @@ class Matrix
         for (size_t i = 0; i < width && i < height; ++ i)
             res[i][i] = T(1);
         return res;
+    }
+    Matrix(std::initializer_list<std::initializer_list<T>> init)
+    {
+        size_t height = init.size();
+        size_t width  = 0;
+
+        for (auto iter = init.begin(); iter != init.end(); ++ iter)
+            if (width < iter -> size())
+                width = iter -> size();
+
+        ptr = MatrixPtr(new OrdinaryMatrix<T>(width, height));
+        
+        size_t row = 0;
+        for (auto rowi = init.begin(); rowi != init.end(); ++ rowi, ++ row)
+        {
+            size_t col = 0;
+            for (auto coli = rowi -> begin(); coli != rowi -> end(); ++ coli, ++ col)
+                Access(row, col) = *coli;
+        }
     }
 };
 
