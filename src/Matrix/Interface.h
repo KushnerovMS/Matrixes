@@ -4,6 +4,13 @@
 
 namespace Matrix {
 
+enum Type
+{
+    UDEFINED = 0,
+    ORDINATY_MATRIX,
+    SPARCE_MATRIX
+};
+
 template<typename T>
 class IMatrix 
 {
@@ -13,7 +20,7 @@ class IMatrix
 
     virtual std::unique_ptr<IMatrix<T>> Clone() const = 0;
 
-    virtual const std::string& getType() const = 0;
+    virtual Type getType() const { return Type::UDEFINED; }
 
     virtual size_t getWidth()  const = 0;
     virtual size_t getHeight() const = 0;

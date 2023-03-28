@@ -10,8 +10,6 @@
 
 namespace Matrix {
 
-const std::string OrdinaryMatrixType = "OrdinaryMatrixType";
-
 template<typename T>
 class OrdinaryMatrix : public IMatrix<T>
 {
@@ -20,12 +18,14 @@ class OrdinaryMatrix : public IMatrix<T>
         T** data = nullptr;
         size_t width = 0, height = 0;
 
+        Data() : width(0), height(0), data(nullptr) {}
         Data(size_t w, size_t h) : width(w), height(h)
         {
             data = new T* [height];
             for (size_t i = 0; i < height; i ++)
                 data[i] = new T [width];
         }
+
         Data(const Data& other) : width(other.width), height(other.height)
         {
             data = new T*[height];
@@ -49,7 +49,7 @@ class OrdinaryMatrix : public IMatrix<T>
 
             if (rhs.width == width)
             {
-                if (rhs.height = height)
+                if (rhs.height == height)
                     ;
                 else if (height < rhs.height)
                 {
@@ -101,24 +101,35 @@ class OrdinaryMatrix : public IMatrix<T>
             std::swap(height, rhs.height);
         }
 
-        T*& operator[](size_t i) { return data[i]; }
+        ~Data()
+        {
+            for (size_t i = 0; i < height; i ++)
+                delete[] data[i];
+            delete[] data;
+        }
+
+        inline T*& operator[](size_t i) { return data[i]; }
     } data_;
 
     public:
     OrdinaryMatrix() = delete;
-    OrdinaryMatrix(size_t cols, size_t rows, const T& val = T(0)) : data_(cols, rows)
+    OrdinaryMatrix(size_t cols, size_t rows, const T& val = T(0))
     {
         if (cols == 0) throw Matrix::MatrixError("Matrix with 0 columns can not be created");
         if (rows == 0) throw Matrix::MatrixError("Matrix with 0 rows can not be created");
+
+        data_ = Data(cols, rows);
 
         for (size_t row = 0; row < data_.height; ++ row)
             std::fill(data_[row], data_[row] + cols, val);
     }
     template <typename Iterator>
-    OrdinaryMatrix (size_t cols, size_t rows, Iterator start) : data_(cols, rows)
+    OrdinaryMatrix (size_t cols, size_t rows, Iterator start)
     {
         if (cols == 0) throw Matrix::MatrixError("Matrix with 0 columns can not be created");
         if (rows == 0) throw Matrix::MatrixError("Matrix with 0 rows can not be created");
+
+        data_ = Data(cols, rows);
 
         for (size_t row = 0; row < data_.height; ++ row)
             for (size_t col = 0; col < data_.width; ++ col, ++ start)
@@ -128,7 +139,7 @@ class OrdinaryMatrix : public IMatrix<T>
     std::unique_ptr<IMatrix<T>> Clone() const
     { return std::unique_ptr<IMatrix<T>>(new OrdinaryMatrix<T>(*this)); }
 
-    const std::string& getType() const noexcept { return OrdinaryMatrixType; }
+    Type getType() const noexcept { return Type::ORDINATY_MATRIX; }
 
     size_t getWidth()  const noexcept { return data_.width; }
     size_t getHeight() const noexcept { return data_.height; }
@@ -173,12 +184,14 @@ class OrdinaryMatrix : public IMatrix<T>
                     return nullItem;
             }
 
-            T akk = copy[k][k];
+            T* rowk = copy[k];
+            T akk = rowk[k];
             for (size_t i = k + 1; i < dim; ++ i)
             {
-                T aik = copy[i][k];
-                for (size_t j = k + 1; j <= dim; ++ j)
-                    copy[i][j] = (copy[i][j] * akk - copy[k][j] * copy[i][k]) / ak_1k_1;
+                T* rowi = copy[i];
+                T aik = rowi[k];
+                for (size_t j = k + 1; j < dim; ++ j)
+                    rowi[j] = (rowi[j] * akk - rowk[j] * aik) / ak_1k_1;
             }
 
             ak_1k_1 = copy[k][k];

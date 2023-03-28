@@ -7,6 +7,7 @@
 
 #include "Interface.h"
 #include "Definitions/OrdinaryMatrix.h"
+#include "Definitions/SparceMatrix.h"
 
 namespace Matrix {
 
@@ -117,7 +118,7 @@ class Matrix
     static Matrix Zeros(size_t width, size_t height = 0)
     {
         if (height == 0) height = width;
-        return Matrix<T>(new OrdinaryMatrix<T>(width, height));
+        return Matrix<T>(new SparceMatrix<T>(width, height));
     }
     static Matrix Ones(size_t width, size_t height = 0)
     {
@@ -127,10 +128,14 @@ class Matrix
     static Matrix Eye(size_t width, size_t height = 0)
     {
         if (height == 0) height = width;
-        Matrix<T> res(new OrdinaryMatrix<T>(width, height));
+        std::vector<T> buff(width * height);
         for (size_t i = 0; i < width && i < height; ++ i)
-            res[i][i] = T(1);
-        return res;
+            buff[i * width + i] = T(1);
+
+        if (std::max(width, height) > 3)
+            return Matrix<T>(new SparceMatrix<T>(width, height, buff.begin()));
+        else
+            return Matrix<T>(new OrdinaryMatrix<T>(width, height, buff.begin()));
     }
     Matrix(std::initializer_list<std::initializer_list<T>> init)
     {
@@ -141,15 +146,27 @@ class Matrix
             if (width < iter -> size())
                 width = iter -> size();
 
-        ptr = MatrixPtr(new OrdinaryMatrix<T>(width, height));
+        std::vector<T> buf(width * height);
+
+        constexpr T NullValue = T(0);
+        size_t n = 0;
         
         size_t row = 0;
         for (auto rowi = init.begin(); rowi != init.end(); ++ rowi, ++ row)
         {
             size_t col = 0;
             for (auto coli = rowi -> begin(); coli != rowi -> end(); ++ coli, ++ col)
-                Access(row, col) = *coli;
+            {
+                if (*coli != NullValue)
+                    ++ n;
+                buf[row * width + col] = std::move(*coli);
+            }
         }
+
+        if (3 * n / width / height == 0)
+            ptr = MatrixPtr(new SparceMatrix<T>(width, height, buf.begin()));
+        else
+            ptr = MatrixPtr(new OrdinaryMatrix<T>(width, height, buf.begin()));
     }
 };
 

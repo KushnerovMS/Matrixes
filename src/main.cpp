@@ -6,8 +6,10 @@
 #include "Matrix/Container.h"
 #include "Matrix/Errors.h"
 
+
 int main () try
 {
+    /*
     size_t dim = 200;
     double range = 1;
     std::vector<double> vec(dim * dim);
@@ -16,23 +18,32 @@ int main () try
         item = range - 2 * range * std::rand() / RAND_MAX;
     Matrix::Matrix<double> m (dim, dim, vec.begin());
 
+    std::cout << sizeof (vec) << std::endl;
+    */
+
     /*
     Matrix::Matrix<float> m = {{1, 2, 3, 1},
-                             {4, 8, 6, 2},
-                             {7, 8, 9, 3},
-                             {2, 3, 4, 5}};
-                             */
+                               {4, 8, 6, 2},
+                               {7, 8, 9, 3},
+                               {2, 3, 4, 5}};
+                               */
 
+    Matrix::Matrix<int> m = {{2, 0, 0, 1},
+                             {0, 2, 0, 0},
+                             {0, 0, 0, 2},
+                             {0, 0, 1, 0}};
 
-    //m.Print();
+    m.Print();
     
     std::cout << m.det() << std::endl;
 
+    /*
     clock_t beg_t = std::clock();
-    for (size_t i = 0; i < 100; ++ i)
+    for (size_t i = 0; i < 1000000; ++ i)
         m.det();
     clock_t end_t = std::clock();
     std::cout << 1000 * (end_t - beg_t) / CLOCKS_PER_SEC << " ms\n";
+    */
 
     return 0;
 }
